@@ -1,0 +1,18 @@
+services:
+  thoth-scann:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thoth_scann_app
+    ports:
+      # Mapeo: [Puerto en tu computadora] : [Puerto dentro del contenedor]
+      - "8501:8501"
+    volumes:
+      # Volumen: Sincroniza la carpeta output de tu máquina física con la del contenedor
+      # Los archivos .md generados dentro del contenedor aparecerán directamente en tu carpeta local
+      - ./output:/app/output
+    environment:
+      # Puedes descomentar y agregar tu clave de OpenAI si deseas usar OCR por visión
+      # - OPENAI_API_KEY=tu_api_key_aqui
+      - STREAMLIT_SERVER_HEADLESS=true
+    restart: unless-stopped

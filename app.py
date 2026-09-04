@@ -12,12 +12,19 @@ import zipfile
 from pathlib import Path
 import streamlit as st
 
-# Importación del motor MarkItDown
+# Importación del motor MarkItDown y Thoth Extractor
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 try:
     from markitdown import MarkItDown, StreamInfo
-except ImportError:
+    from thoth_extractor import (
+        extract_directory,
+        extract_zip,
+        ExtractionOptions,
+        ExtractionResult,
+    )
+except ImportError as e:
     st.error(
-        "❌ El paquete 'markitdown' no está instalado en el entorno actual. "
+        f"❌ Error al importar dependencias del sistema: {e}. "
         "Asegúrate de haber activado el entorno virtual (.venv)."
     )
     st.stop()
@@ -266,8 +273,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_single, tab_batch, tab_url = st.tabs(
-    ["📄 Documento Individual", "📦 Procesamiento por Lotes", "🌐 Convertir desde URL"]
+tab_single, tab_batch, tab_project, tab_url = st.tabs(
+    [
+        "📄 Documento Individual",
+        "📦 Procesamiento por Lotes",
+        "📂 Repositorio / Proyecto de Software",
+        "🌐 Convertir desde URL",
+    ]
 )
 
 # ==========================================
@@ -515,7 +527,246 @@ with tab_batch:
             st.dataframe(summary_data, use_container_width=True)
 
 # ==========================================
-# PESTAÑA 3: CONVERSIÓN DESDE URL
+# PESTAÑA 3: REPOSITORIO / PROYECTO COMPLETO
+# ==========================================
+with tab_project:
+    st.markdown("#### 📂 Extracción y Documentación de Proyectos Completos")
+    st.write(
+        "Escanea un repositorio o carpeta de software completo. Genera el mapa jerárquico (**TREE.md**), "
+        "la estructura espejo de archivos individuales para RAG/agentes (**sources/**) "
+        "y un documento consolidado todo-en-uno (**CONSOLIDATED.md**) para LLMs de contexto largo."
+    )
+
+    proj_input_mode = st.radio(
+        "Método de entrada",
+        [
+            "📁 Carpeta Local en Disco (Recomendado, ultra rápido)",
+            "📦 Archivo ZIP del Proyecto",
+        ],
+        horizontal=True,
+    )
+
+    proj_folder_path = ""
+    proj_zip_file = None
+    custom_proj_name = ""
+
+    if "Carpeta Local" in proj_input_mode:
+        c_p1, c_p2 = st.columns([3, 1])
+        with c_p1:
+            proj_folder_path = st.text_input(
+                "Ruta absoluta de la carpeta del proyecto en tu equipo",
+                value="/home/massive-usr/Documentos/desarrollo/thoth_scann/markitdown-main",
+                help="Ruta directa de la carpeta en disco. No requiere subida por navegador.",
+            )
+        with c_p2:
+            custom_proj_name = st.text_input(
+                "Nombre del proyecto (opcional)",
+                value="",
+                placeholder="Autodetectar de la carpeta",
+            )
+    else:
+        c_z1, c_z2 = st.columns([3, 1])
+        with c_z1:
+            proj_zip_file = st.file_uploader(
+                "Sube el archivo ZIP con el proyecto de software",
+                type=["zip"],
+                key="project_zip_uploader",
+            )
+        with c_z2:
+            custom_proj_name = st.text_input(
+                "Nombre del proyecto (opcional)",
+                value="",
+                placeholder="Autodetectar del ZIP",
+            )
+
+    st.markdown("##### ⚙️ Opciones de Generación")
+    opt_c1, opt_c2, opt_c3 = st.columns(3)
+    with opt_c1:
+        gen_tree = st.checkbox("🌳 Generar TREE.md (Mapa de contexto)", value=True)
+    with opt_c2:
+        gen_separate = st.checkbox(
+            "📑 Estructura Espejo (sources/ para RAG)", value=True
+        )
+    with opt_c3:
+        gen_consolidated = st.checkbox(
+            "📄 Archivo CONSOLIDATED.md (Para chats LLM)", value=True
+        )
+
+    btn_extract_project = st.button(
+        "🚀 Extraer y Documentar Proyecto", type="primary"
+    )
+
+    if btn_extract_project:
+        out_base = Path(
+            output_dir_input.strip()
+            if auto_save and output_dir_input.strip()
+            else "/home/massive-usr/Documentos/desarrollo/thoth_scann/output"
+        )
+        opts = ExtractionOptions(
+            generate_tree=gen_tree,
+            generate_separate_files=gen_separate,
+            generate_consolidated=gen_consolidated,
+        )
+
+        with st.spinner("Escaneando repositorio y estructurando código..."):
+            start_proj = time.time()
+            try:
+                res_proj = None
+                if "Carpeta Local" in proj_input_mode:
+                    if (
+                        not proj_folder_path.strip()
+                        or not Path(proj_folder_path.strip()).is_dir()
+                    ):
+                        st.error(
+                            f"❌ La ruta especificada no es una carpeta válida: `{proj_folder_path}`"
+                        )
+                        st.stop()
+                    res_proj = extract_directory(
+                        source_dir=proj_folder_path.strip(),
+                        output_base_dir=out_base,
+                        options=opts,
+                    )
+                else:
+                    if proj_zip_file is None:
+                        st.error(
+                            "❌ Por favor selecciona un archivo ZIP para procesar."
+                        )
+                        st.stop()
+                    p_name = (
+                        custom_proj_name.strip()
+                        or Path(proj_zip_file.name).stem
+                    )
+                    res_proj = extract_zip(
+                        zip_source=io.BytesIO(proj_zip_file.getvalue()),
+                        output_base_dir=out_base,
+                        project_name=p_name,
+                        options=opts,
+                    )
+
+                elapsed_proj = time.time() - start_proj
+                st.session_state["last_project_result"] = res_proj
+                st.session_state["last_project_elapsed"] = elapsed_proj
+
+            except Exception as e:
+                st.error(
+                    f"❌ Error durante la extracción del proyecto: {str(e)}"
+                )
+                st.stop()
+
+    if "last_project_result" in st.session_state:
+        res_proj = st.session_state["last_project_result"]
+        elapsed_proj = st.session_state.get("last_project_elapsed", 0.0)
+
+        st.success(
+            f"🎉 ¡Proyecto `{res_proj.project_name}` documentado con éxito en {elapsed_proj:.2f}s!"
+        )
+        st.info(f"📁 **Directorio de salida en disco:** `{res_proj.output_dir}`")
+
+        # Métricas principales
+        pm1, pm2, pm3, pm4 = st.columns(4)
+        pm1.metric("Archivos Procesados", f"{res_proj.total_files:,}")
+        pm2.metric("Líneas de Código", f"{res_proj.total_lines:,}")
+        pm3.metric("Tokens aprox. (LLM)", f"~{res_proj.token_estimate:,}")
+        top_lang = (
+            max(res_proj.language_stats.items(), key=lambda x: x[1]["lines"])[
+                0
+            ]
+            if res_proj.language_stats
+            else "N/A"
+        )
+        pm4.metric("Lenguaje Principal", str(top_lang).upper())
+
+        # Botones de descarga
+        d_col1, d_col2 = st.columns(2)
+        with d_col1:
+            if (
+                res_proj.consolidated_path
+                and res_proj.consolidated_path.exists()
+            ):
+                st.download_button(
+                    label="📥 Descargar CONSOLIDATED.md (Todo-en-uno)",
+                    data=res_proj.consolidated_path.read_text(encoding="utf-8"),
+                    file_name=f"{res_proj.project_name}_CONSOLIDATED.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                )
+        with d_col2:
+            run_zip_buf = io.BytesIO()
+            with zipfile.ZipFile(
+                run_zip_buf, "w", zipfile.ZIP_DEFLATED
+            ) as rz:
+                for r_root, _, r_files in os.walk(res_proj.output_dir):
+                    for rf in r_files:
+                        rf_abs = Path(r_root) / rf
+                        rf_rel = rf_abs.relative_to(res_proj.output_dir)
+                        rz.write(rf_abs, arcname=str(rf_rel))
+            run_zip_buf.seek(0)
+            st.download_button(
+                label="📥 Descargar Paquete Completo (.zip con Tree y Sources)",
+                data=run_zip_buf,
+                file_name=f"{res_proj.project_name}_documentado.zip",
+                mime="application/zip",
+                use_container_width=True,
+            )
+
+        st.markdown("---")
+
+        # Pestañas de inspección visual
+        pt1, pt2, pt3 = st.tabs(
+            [
+                "🌳 Mapa del Proyecto (TREE.md)",
+                "📄 Vista Consolidada",
+                "📊 Desglose de Lenguajes",
+            ]
+        )
+
+        with pt1:
+            if res_proj.tree_path and res_proj.tree_path.exists():
+                st.markdown(res_proj.tree_path.read_text(encoding="utf-8"))
+            else:
+                st.code(res_proj.tree_content)
+
+        with pt2:
+            if (
+                res_proj.consolidated_path
+                and res_proj.consolidated_path.exists()
+            ):
+                st.text_area(
+                    "Contenido Consolidado (Listo para copiar y pegar en ChatGPT / Claude / Gemini)",
+                    value=res_proj.consolidated_path.read_text(
+                        encoding="utf-8"
+                    ),
+                    height=450,
+                )
+            else:
+                st.info(
+                    "La opción de archivo consolidado no fue seleccionada."
+                )
+
+        with pt3:
+            lang_table_data = []
+            for l_name, l_data in sorted(
+                res_proj.language_stats.items(),
+                key=lambda x: x[1]["lines"],
+                reverse=True,
+            ):
+                l_pct = (
+                    (l_data["lines"] / res_proj.total_lines * 100)
+                    if res_proj.total_lines > 0
+                    else 0
+                )
+                lang_table_data.append(
+                    {
+                        "Lenguaje": l_name.upper(),
+                        "Archivos": l_data["files"],
+                        "Líneas": f"{l_data['lines']:,}",
+                        "Porcentaje": f"{l_pct:.1f}%",
+                    }
+                )
+            st.dataframe(lang_table_data, use_container_width=True)
+
+# ==========================================
+# PESTAÑA 4: CONVERSIÓN DESDE URL
 # ==========================================
 with tab_url:
     st.markdown("#### 🌐 Convertir Contenido Web a Markdown")

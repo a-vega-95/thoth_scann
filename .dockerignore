@@ -1,0 +1,25 @@
+# Ignorar entornos virtuales locales
+.venv/
+venv/
+ENV/
+
+# Ignorar cachés de Python y compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Ignorar datos de salida generados
+output/*.md
+!output/.gitkeep
+
+# Ignorar control de versiones e IDEs
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Ignorar archivos comprimidos de distribución
+*.zip
+*.tar.gz

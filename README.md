@@ -18,7 +18,11 @@
     * **Java** (`.java`), **R** (`.r`, `.R`), **Python** (`.py`), **Shell/Bash** (`.sh`, `.bash`, `.zsh`).
     * **Configuración**: YAML (`.yml`, `.yaml`), JSON, TOML, XML.
     * **Web y Sistemas**: JavaScript (`.js`, `.ts`, `.tsx`), C/C++ (`.c`, `.cpp`), C#, Rust (`.rs`), Go (`.go`), SQL, `Dockerfile`, `Makefile`.
-  * **Ingesta de Proyectos en ZIP**: Sube un archivo `.zip` con un repositorio o carpeta de software completo y Thoth Scann extraerá, organizará y documentará todos los scripts en un único archivo Markdown consolidado listo para alimentar modelos de lenguaje.
+  * **Ingesta de Proyectos Completos (Carpetas locales o ZIP)**:
+    * **🌳 TREE.md**: Árbol jerárquico visual ASCII y métricas de código.
+    * **📑 Estructura Espejo (`sources/`)**: Archivos separados individuales organizados en subcarpetas para indexación RAG o agentes modulares.
+    * **📄 CONSOLIDATED.md**: Archivo todo-en-uno delimitado para LLMs de ventana amplia (Gemini 2.0, Claude 3.7, GPT-4o).
+    * **Filtros Inteligentes**: Exclusión automática de ruido (`node_modules`, `.venv`, `.git`, binarios y lockfiles).
 
 * **👁️ Capacidades de OCR y Visión Multimodal**:
   * Compatible con modelos de visión (OpenAI GPT-4o o APIs compatibles) para extraer texto de imágenes embebidas o documentos escaneados.
@@ -26,10 +30,11 @@
 
 * **🖥️ Interfaz Gráfica de Usuario (Web UI)**:
   * Construida con **Streamlit**, moderna, rápida e intuitiva.
-  * **Pestaña Individual**: Carga por arrastrar y soltar (Drag & Drop), visor dual (Markdown renderizado vs Código fuente raw) y métricas de palabras, caracteres y estimación de tokens LLM.
-  * **Pestaña por Lotes (Batch)**: Procesa múltiples archivos a la vez con barra de progreso y descarga consolidada en `.zip`.
-  * **Pestaña Web**: Conversión directa de URLs a Markdown limpio sin anuncios ni código residual.
-  * **💾 Guardado Automático en Disco**: Cada archivo procesado se guarda automáticamente en la carpeta `output/` de forma organizada.
+  * **Pestaña 1 (Individual)**: Carga por Drag & Drop, visor dual y métricas de tokens.
+  * **Pestaña 2 (Lotes)**: Procesa múltiples archivos a la vez con barra de progreso y descarga ZIP.
+  * **Pestaña 3 (Proyectos / Repositorios)**: Escanea carpetas locales o ZIPs de código con opciones de generación.
+  * **Pestaña 4 (Web)**: Conversión directa de URLs a Markdown limpio.
+  * **💾 Guardado Automático en Disco**: Cada corrida genera su carpeta organizada dentro de `output/`.
 
 ---
 
@@ -39,8 +44,13 @@
 thoth_scann/
 ├── app.py                     # Aplicación web interactiva (Streamlit)
 ├── run_ui.sh                  # Lanzador rápido de un solo clic para Linux
-├── README.md                  # Documentación del proyecto
+├── Dockerfile                 # Contenedor Docker de producción
+├── docker-compose.yml         # Orquestación con volúmenes de salida y red
+├── README.md                  # Documentación completa del proyecto
 ├── output/                    # Directorio de guardado automático de archivos .md
+├── thoth_extractor/           # Módulo autónomo de análisis y extracción de proyectos
+│   ├── __init__.py
+│   └── project_extractor.py
 └── markitdown-main/           # Motor base desacoplado y modular
     └── packages/
         ├── markitdown/        # Núcleo y CLI de MarkItDown
