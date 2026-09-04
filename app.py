@@ -74,13 +74,98 @@ def format_bytes(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
 
 
+# Diccionario de extensiones de código a lenguajes Markdown
+CODE_EXTENSIONS = {
+    ".py": "python",
+    ".java": "java",
+    ".r": "r",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".yml": "yaml",
+    ".yaml": "yaml",
+    ".json": "json",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "typescript",
+    ".tsx": "tsx",
+    ".jsx": "jsx",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".h": "c",
+    ".hpp": "cpp",
+    ".cs": "csharp",
+    ".go": "go",
+    ".rs": "rust",
+    ".php": "php",
+    ".rb": "ruby",
+    ".sql": "sql",
+    ".html": "html",
+    ".css": "css",
+    ".scss": "scss",
+    ".xml": "xml",
+    ".toml": "toml",
+    ".ini": "ini",
+    ".kt": "kotlin",
+    ".scala": "scala",
+    ".dart": "dart",
+    ".swift": "swift",
+    ".lua": "lua",
+    ".dockerfile": "dockerfile",
+}
+
+
+class SourceCodeConverter:
+    """Convertidor especializado para código fuente con resaltado de sintaxis."""
+
+    def accepts(self, file_stream, stream_info, **kwargs) -> bool:
+        ext = (stream_info.extension or "").lower()
+        fname = (stream_info.filename or "").lower()
+        if ext in CODE_EXTENSIONS:
+            return True
+        if fname in ("dockerfile", "makefile", "cmakelists.txt", "jenkinsfile"):
+            return True
+        return False
+
+    def convert(self, file_stream, stream_info, **kwargs):
+        from markitdown import DocumentConverterResult
+
+        ext = (stream_info.extension or "").lower()
+        fname = stream_info.filename or "código"
+        lang = CODE_EXTENSIONS.get(ext, "")
+        if fname.lower() == "dockerfile":
+            lang = "dockerfile"
+        elif fname.lower() == "makefile":
+            lang = "makefile"
+
+        raw = file_stream.read()
+        try:
+            content = raw.decode(stream_info.charset or "utf-8")
+        except UnicodeDecodeError:
+            try:
+                import charset_normalizer
+
+                content = str(
+                    charset_normalizer.from_bytes(raw).best()
+                    or raw.decode("latin-1", errors="replace")
+                )
+            except Exception:
+                content = raw.decode("latin-1", errors="replace")
+
+        md = f"### `{fname}`\n```{lang}\n{content}\n```\n"
+        return DocumentConverterResult(markdown=md, title=fname)
+
+
 def get_markitdown_instance(
     enable_plugins: bool = False,
     openai_api_key: str = "",
     llm_model: str = "gpt-4o",
     llm_prompt: str = "",
 ) -> MarkItDown:
-    """Instancia el motor MarkItDown con la configuración seleccionada."""
+    """Instancia el motor MarkItDown con la configuración seleccionada y soporte de código fuente."""
     kwargs = {"enable_plugins": enable_plugins}
 
     if enable_plugins and openai_api_key.strip():
@@ -97,7 +182,10 @@ def get_markitdown_instance(
                 "⚠️ La librería 'openai' no está instalada. El OCR con LLM estará deshabilitado."
             )
 
-    return MarkItDown(**kwargs)
+    md = MarkItDown(**kwargs)
+    # Registrar el convertidor de código fuente con prioridad más alta que PlainText
+    md.register_converter(SourceCodeConverter(), priority=-0.5)
+    return md
 
 
 # ------------------------------
@@ -158,9 +246,10 @@ with st.sidebar:
     st.markdown(
         """
         - **Documentos**: PDF, DOCX, PPTX, XLSX, XLS, EPUB
+        - **Código Fuente**: .java, .py, .r, .sh, .bash, .yml, .yaml, .js, .ts, .c, .cpp, .sql, .rs, .go, Dockerfile, etc.
         - **Texto y Datos**: CSV, JSON, XML, HTML, TXT
         - **Multimedia**: JPG, PNG, MP3, WAV
-        - **Contenedores**: Archivos ZIP (recursivo), Notebooks (.ipynb)
+        - **Contenedores**: Archivos ZIP (proyectos completos), Notebooks (.ipynb)
         - **Web**: Enlaces directos o URLs de Wikipedia
         """
     )
@@ -173,7 +262,7 @@ with st.sidebar:
 # ------------------------------
 st.markdown('<div class="main-title">📜 Thoth Scann</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="subtitle">Digitalización y conversión inteligente de documentos a Markdown optimizado para LLMs y RAG.</div>',
+    '<div class="subtitle">Digitalización y conversión inteligente de documentos y código a Markdown optimizado para LLMs y RAG.</div>',
     unsafe_allow_html=True,
 )
 
@@ -189,27 +278,9 @@ with tab_single:
 
     with col_upload:
         uploaded_file = st.file_uploader(
-            "Selecciona o arrastra un archivo aquí",
-            type=[
-                "pdf",
-                "docx",
-                "xlsx",
-                "xls",
-                "pptx",
-                "html",
-                "csv",
-                "json",
-                "xml",
-                "txt",
-                "zip",
-                "jpg",
-                "jpeg",
-                "png",
-                "mp3",
-                "wav",
-                "ipynb",
-                "epub",
-            ],
+            "Selecciona o arrastra cualquier archivo aquí (PDF, DOCX, ZIP o código .java, .py, .r, .sh, .yml, etc.)",
+            type=None,
+            help="Admite documentos, imágenes, audio, archivos comprimidos .zip y cualquier archivo de código fuente.",
             key="single_uploader",
         )
 
@@ -324,26 +395,10 @@ with tab_batch:
     )
 
     batch_files = st.file_uploader(
-        "Selecciona varios archivos",
-        type=[
-            "pdf",
-            "docx",
-            "xlsx",
-            "xls",
-            "pptx",
-            "html",
-            "csv",
-            "json",
-            "xml",
-            "txt",
-            "zip",
-            "jpg",
-            "jpeg",
-            "png",
-            "ipynb",
-            "epub",
-        ],
+        "Selecciona o arrastra varios archivos (Documentos o archivos de código)",
+        type=None,
         accept_multiple_files=True,
+        help="Admite documentos, imágenes, audio, archivos comprimidos .zip y cualquier archivo de código fuente (.java, .py, .r, .sh, .yml, etc.).",
         key="batch_uploader",
     )
 
