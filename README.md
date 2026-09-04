@@ -141,3 +141,4 @@ print(resultado.markdown)
 
 * Este proyecto utiliza y extiende el software de código abierto **MarkItDown** desarrollado por Microsoft bajo licencia **MIT**.
 * Libre para uso personal, comercial, modificación y distribución.
+# thoth_scann
