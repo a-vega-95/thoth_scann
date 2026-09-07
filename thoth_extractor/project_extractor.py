@@ -404,14 +404,14 @@ class ProjectExtractor:
         # 1. Generar TREE.md
         if self.options.generate_tree:
             tree_md_parts = [
-                f"# 🗺️ Mapa Arquitectónico de Contexto: `{project_name}`\n",
+                f"# Mapa Arquitectónico de Contexto: `{project_name}`\n",
                 f"> Generado por **Thoth Scann** el {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n",
-                "## 📊 Métricas Generales",
+                "## Métricas del Proyecto",
                 f"- **Total de Archivos**: `{total_files:,}`",
                 f"- **Total de Líneas de Código**: `{total_lines:,}`",
                 f"- **Total de Caracteres**: `{total_chars:,}`",
                 f"- **Estimación de Tokens (LLM)**: `~{token_estimate:,}` tokens\n",
-                "## 💻 Desglose por Lenguaje\n",
+                "## Distribución de Lenguajes\n",
                 "| Lenguaje | Archivos | Líneas | % Código |",
                 "| :--- | :--- | :--- | :--- |",
             ]
@@ -423,11 +423,11 @@ class ProjectExtractor:
                 )
 
             tree_md_parts.extend([
-                "\n## 🌳 Árbol Jerárquico del Proyecto\n",
+                "\n## Árbol Jerárquico del Proyecto\n",
                 "```text",
                 ascii_tree,
                 "```\n",
-                "## 📑 Índice de Archivos Fuente\n",
+                "## Catálogo de Archivos Fuente\n",
             ])
 
             for f in sorted(files, key=lambda x: x.rel_path):
@@ -465,11 +465,11 @@ class ProjectExtractor:
                 f"# Contexto Consolidado del Proyecto: `{project_name}`\n",
                 "> Este documento consolida todo el código fuente del proyecto para análisis arquitectónico, ",
                 "> resolución de errores, auditoría o refactorización integral con LLMs.\n",
-                "## 🌳 Estructura de Directorios\n",
+                "## Estructura de Directorios\n",
                 "```text",
                 ascii_tree,
                 "```\n",
-                "## 📦 Contenido de Archivos Fuente\n",
+                "## Catálogo de Archivos Fuente\n",
             ]
 
             for f in sorted(files, key=lambda x: x.rel_path):

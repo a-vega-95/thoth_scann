@@ -24,7 +24,7 @@ try:
     )
 except ImportError as e:
     st.error(
-        f"❌ Error al importar dependencias del sistema: {e}. "
+        f"Error al importar dependencias del sistema: {e}. "
         "Asegúrate de haber activado el entorno virtual (.venv)."
     )
     st.stop()
@@ -33,7 +33,7 @@ except ImportError as e:
 # Configuración de página
 st.set_page_config(
     page_title="Thoth Scann | Conversor Documental",
-    page_icon="📜",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -186,7 +186,7 @@ def get_markitdown_instance(
                 kwargs["llm_prompt"] = llm_prompt.strip()
         except ImportError:
             st.sidebar.warning(
-                "⚠️ La librería 'openai' no está instalada. El OCR con LLM estará deshabilitado."
+                "Aviso: La librería 'openai' no está instalada. El OCR con LLM estará deshabilitado."
             )
 
     md = MarkItDown(**kwargs)
@@ -203,7 +203,7 @@ with st.sidebar:
         "https://api.iconify.design/lucide:file-text.svg?color=%232563eb",
         width=50,
     )
-    st.markdown("### ⚙️ Configuración del Motor")
+    st.markdown("### Configuración del Motor")
 
     enable_plugins = st.toggle(
         "Habilitar Plugins / OCR",
@@ -216,7 +216,7 @@ with st.sidebar:
     llm_prompt = ""
 
     if enable_plugins:
-        st.markdown("#### 👁️ Ajustes de Visión / OCR")
+        st.markdown("#### Ajustes de Visión / OCR")
         openai_key = st.text_input(
             "OpenAI API Key (o compatible)",
             type="password",
@@ -235,7 +235,7 @@ with st.sidebar:
         )
 
     st.markdown("---")
-    st.markdown("#### 📁 Guardado en Disco Local")
+    st.markdown("#### Guardado en Disco Local")
     auto_save = st.checkbox(
         "Guardar automáticamente en disco",
         value=True,
@@ -249,7 +249,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("#### 📂 Formatos Soportados")
+    st.markdown("#### Formatos Soportados")
     st.markdown(
         """
         - **Documentos**: PDF, DOCX, PPTX, XLSX, XLS, EPUB
@@ -261,13 +261,13 @@ with st.sidebar:
         """
     )
     st.markdown("---")
-    st.caption("🚀 **Thoth Scann v0.1** | Motor MarkItDown")
+    st.caption("Thoth Scann v0.1 | Motor MarkItDown")
 
 
 # ------------------------------
 # Cabecera Principal
 # ------------------------------
-st.markdown('<div class="main-title">📜 Thoth Scann</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">Thoth Scann</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="subtitle">Digitalización y conversión inteligente de documentos y código a Markdown optimizado para LLMs y RAG.</div>',
     unsafe_allow_html=True,
@@ -275,10 +275,10 @@ st.markdown(
 
 tab_single, tab_batch, tab_project, tab_url = st.tabs(
     [
-        "📄 Documento Individual",
-        "📦 Procesamiento por Lotes",
-        "📂 Repositorio / Proyecto de Software",
-        "🌐 Convertir desde URL",
+        "Documento Individual",
+        "Procesamiento por Lotes",
+        "Repositorio / Proyecto",
+        "Conversión Web / URL",
     ]
 )
 
@@ -303,12 +303,12 @@ with tab_single:
         file_ext = Path(file_name).suffix.lower()
 
         with col_action:
-            st.markdown("#### 📋 Información")
+            st.markdown("#### Información")
             st.write(f"**Archivo:** `{file_name}`")
             st.write(f"**Tamaño:** {format_bytes(file_size)}")
             st.write(f"**Extensión:** `{file_ext}`")
             btn_convert = st.button(
-                "⚡ Convertir a Markdown", type="primary", use_container_width=True
+                "Convertir a Markdown", type="primary", use_container_width=True
             )
 
         # Ejecución de la conversión
@@ -340,7 +340,7 @@ with tab_single:
                         st.session_state["last_elapsed"] = elapsed
 
                     except Exception as e:
-                        st.error(f"❌ Error al convertir el archivo: {str(e)}")
+                        st.error(f"Error al convertir el archivo: {str(e)}")
                         st.stop()
 
             # Recuperar resultado almacenado
@@ -352,7 +352,7 @@ with tab_single:
             word_count = len(markdown_output.split())
             token_estimate = int(char_count / 4)
 
-            st.success(f"✅ Conversión completada en {elapsed:.2f} segundos")
+            st.success(f"Conversión completada en {elapsed:.2f} segundos.")
 
             m_col1, m_col2, m_col3, m_col4 = st.columns(4)
             m_col1.metric("Caracteres", f"{char_count:,}")
@@ -361,7 +361,7 @@ with tab_single:
             with m_col4:
                 base_name = Path(file_name).stem
                 st.download_button(
-                    label="📥 Descargar .md",
+                    label="Descargar Markdown (.md)",
                     data=markdown_output,
                     file_name=f"{base_name}.md",
                     mime="text/markdown",
@@ -375,15 +375,15 @@ with tab_single:
                     out_dir.mkdir(parents=True, exist_ok=True)
                     target_file = out_dir / f"{base_name}.md"
                     target_file.write_text(markdown_output, encoding="utf-8")
-                    st.info(f"💾 **Copia guardada en disco:** `{target_file}`")
+                    st.info(f"**Archivo guardado en disco:** `{target_file}`")
                 except Exception as save_err:
-                    st.warning(f"⚠️ No se pudo guardar en disco: {save_err}")
+                    st.warning(f"Aviso: No se pudo guardar en disco: {save_err}")
 
             st.markdown("---")
 
             # Vistas: Renderizada vs Código fuente
             subtab_preview, subtab_code = st.tabs(
-                ["👁️ Vista Renderizada", "💻 Código Markdown (Raw)"]
+                ["Vista Previa", "Código Markdown (Fuente)"]
             )
 
             with subtab_preview:
@@ -401,7 +401,7 @@ with tab_single:
 # PESTAÑA 2: PROCESAMIENTO POR LOTES
 # ==========================================
 with tab_batch:
-    st.markdown("#### 📦 Conversión de Múltiples Archivos en Lote")
+    st.markdown("#### Conversión de Múltiples Archivos en Lote")
     st.write(
         "Arrastra varios documentos simultáneamente. Podrás procesarlos todos y descargar un archivo ZIP con los Markdowns generados."
     )
@@ -417,7 +417,7 @@ with tab_batch:
     if batch_files:
         st.write(f"Archivos seleccionados: **{len(batch_files)}**")
         btn_batch_convert = st.button(
-            "⚡ Procesar todos los archivos", type="primary"
+            "Procesar todos los archivos", type="primary"
         )
 
         if btn_batch_convert:
@@ -460,7 +460,7 @@ with tab_batch:
 
             batch_elapsed = time.time() - start_batch
             status_text.text(
-                f"🎉 Lote completado en {batch_elapsed:.2f}s! ({total} archivos)"
+                f"Lote completado en {batch_elapsed:.2f}s ({total} archivos)."
             )
 
             # Generar ZIP con los resultados exitosos
@@ -475,7 +475,7 @@ with tab_batch:
 
             # Botón de descarga del ZIP
             st.download_button(
-                label="📥 Descargar todos los Markdown (.zip)",
+                label="Descargar todos los Markdown (.zip)",
                 data=zip_buffer,
                 file_name="thoth_markdown_batch.zip",
                 mime="application/zip",
@@ -495,11 +495,11 @@ with tab_batch:
                             saved_count += 1
                     if saved_count > 0:
                         st.info(
-                            f"💾 **{saved_count} archivos guardados automáticamente en:** `{out_dir}`"
+                            f"**{saved_count} archivos guardados automáticamente en:** `{out_dir}`"
                         )
                 except Exception as save_err:
                     st.warning(
-                        f"⚠️ No se pudieron guardar los archivos en disco: {save_err}"
+                        f"Aviso: No se pudieron guardar los archivos en disco: {save_err}"
                     )
 
             # Tabla resumen de resultados
@@ -509,7 +509,7 @@ with tab_batch:
                     summary_data.append(
                         {
                             "Archivo": name,
-                            "Estado": "✅ Correcto",
+                            "Estado": "Correcto",
                             "Palabras": f"{info['words']:,}",
                             "Detalle": "OK",
                         }
@@ -518,7 +518,7 @@ with tab_batch:
                     summary_data.append(
                         {
                             "Archivo": name,
-                            "Estado": "❌ Falló",
+                            "Estado": "Fallido",
                             "Palabras": "0",
                             "Detalle": info.get("error", "Error desconocido"),
                         }
@@ -530,7 +530,7 @@ with tab_batch:
 # PESTAÑA 3: REPOSITORIO / PROYECTO COMPLETO
 # ==========================================
 with tab_project:
-    st.markdown("#### 📂 Extracción y Documentación de Proyectos Completos")
+    st.markdown("#### Extracción y Documentación de Proyectos Completos")
     st.write(
         "Escanea un repositorio o carpeta de software completo. Genera el mapa jerárquico (**TREE.md**), "
         "la estructura espejo de archivos individuales para RAG/agentes (**sources/**) "
@@ -540,8 +540,8 @@ with tab_project:
     proj_input_mode = st.radio(
         "Método de entrada",
         [
-            "📁 Carpeta Local en Disco (Recomendado, ultra rápido)",
-            "📦 Archivo ZIP del Proyecto",
+            "Carpeta Local en Disco (Rápido, sin subida)",
+            "Archivo ZIP del Proyecto",
         ],
         horizontal=True,
     )
@@ -579,21 +579,21 @@ with tab_project:
                 placeholder="Autodetectar del ZIP",
             )
 
-    st.markdown("##### ⚙️ Opciones de Generación")
+    st.markdown("##### Opciones de Generación")
     opt_c1, opt_c2, opt_c3 = st.columns(3)
     with opt_c1:
-        gen_tree = st.checkbox("🌳 Generar TREE.md (Mapa de contexto)", value=True)
+        gen_tree = st.checkbox("Generar TREE.md (Mapa de contexto)", value=True)
     with opt_c2:
         gen_separate = st.checkbox(
-            "📑 Estructura Espejo (sources/ para RAG)", value=True
+            "Estructura Espejo (sources/ para RAG)", value=True
         )
     with opt_c3:
         gen_consolidated = st.checkbox(
-            "📄 Archivo CONSOLIDATED.md (Para chats LLM)", value=True
+            "Archivo CONSOLIDATED.md (Para chats LLM)", value=True
         )
 
     btn_extract_project = st.button(
-        "🚀 Extraer y Documentar Proyecto", type="primary"
+        "Extraer y Documentar Proyecto", type="primary"
     )
 
     if btn_extract_project:
@@ -618,7 +618,7 @@ with tab_project:
                         or not Path(proj_folder_path.strip()).is_dir()
                     ):
                         st.error(
-                            f"❌ La ruta especificada no es una carpeta válida: `{proj_folder_path}`"
+                            f"Error: La ruta especificada no es una carpeta válida: `{proj_folder_path}`"
                         )
                         st.stop()
                     res_proj = extract_directory(
@@ -629,7 +629,7 @@ with tab_project:
                 else:
                     if proj_zip_file is None:
                         st.error(
-                            "❌ Por favor selecciona un archivo ZIP para procesar."
+                            "Error: Por favor selecciona un archivo ZIP para procesar."
                         )
                         st.stop()
                     p_name = (
@@ -649,7 +649,7 @@ with tab_project:
 
             except Exception as e:
                 st.error(
-                    f"❌ Error durante la extracción del proyecto: {str(e)}"
+                    f"Error durante la extracción del proyecto: {str(e)}"
                 )
                 st.stop()
 
@@ -658,9 +658,9 @@ with tab_project:
         elapsed_proj = st.session_state.get("last_project_elapsed", 0.0)
 
         st.success(
-            f"🎉 ¡Proyecto `{res_proj.project_name}` documentado con éxito en {elapsed_proj:.2f}s!"
+            f"Proyecto `{res_proj.project_name}` documentado con éxito en {elapsed_proj:.2f}s."
         )
-        st.info(f"📁 **Directorio de salida en disco:** `{res_proj.output_dir}`")
+        st.info(f"**Directorio de salida en disco:** `{res_proj.output_dir}`")
 
         # Métricas principales
         pm1, pm2, pm3, pm4 = st.columns(4)
@@ -684,7 +684,7 @@ with tab_project:
                 and res_proj.consolidated_path.exists()
             ):
                 st.download_button(
-                    label="📥 Descargar CONSOLIDATED.md (Todo-en-uno)",
+                    label="Descargar CONSOLIDATED.md (Consolidado)",
                     data=res_proj.consolidated_path.read_text(encoding="utf-8"),
                     file_name=f"{res_proj.project_name}_CONSOLIDATED.md",
                     mime="text/markdown",
@@ -702,7 +702,7 @@ with tab_project:
                         rz.write(rf_abs, arcname=str(rf_rel))
             run_zip_buf.seek(0)
             st.download_button(
-                label="📥 Descargar Paquete Completo (.zip con Tree y Sources)",
+                label="Descargar Paquete Completo (.zip con Tree y Sources)",
                 data=run_zip_buf,
                 file_name=f"{res_proj.project_name}_documentado.zip",
                 mime="application/zip",
@@ -714,9 +714,9 @@ with tab_project:
         # Pestañas de inspección visual
         pt1, pt2, pt3 = st.tabs(
             [
-                "🌳 Mapa del Proyecto (TREE.md)",
-                "📄 Vista Consolidada",
-                "📊 Desglose de Lenguajes",
+                "Mapa de Directorios (TREE.md)",
+                "Vista Consolidada",
+                "Distribución de Lenguajes",
             ]
         )
 
@@ -769,7 +769,7 @@ with tab_project:
 # PESTAÑA 4: CONVERSIÓN DESDE URL
 # ==========================================
 with tab_url:
-    st.markdown("#### 🌐 Convertir Contenido Web a Markdown")
+    st.markdown("#### Convertir Contenido Web a Markdown")
     st.write(
         "Pega la dirección URL de un artículo, página web, Wikipedia o recurso online:"
     )
@@ -778,7 +778,7 @@ with tab_url:
         "URL de origen",
         placeholder="https://es.wikipedia.org/wiki/Escriba_en_el_Antiguo_Egipto",
     )
-    btn_url_convert = st.button("⚡ Convertir URL", type="primary")
+    btn_url_convert = st.button("Convertir URL", type="primary")
 
     if btn_url_convert and url_input.strip():
         with st.spinner(f"Descargando y convirtiendo {url_input}..."):
@@ -788,12 +788,12 @@ with tab_url:
                 result_url = md.convert(url_input.strip())
                 elapsed_url = time.time() - start_url
 
-                st.success(f"✅ URL convertida en {elapsed_url:.2f} segundos")
+                st.success(f"URL convertida en {elapsed_url:.2f} segundos.")
 
                 c1, c2 = st.columns([3, 1])
                 with c2:
                     st.download_button(
-                        label="📥 Descargar .md",
+                        label="Descargar Markdown (.md)",
                         data=result_url.markdown,
                         file_name="web_content.md",
                         mime="text/markdown",
@@ -814,12 +814,12 @@ with tab_url:
                         )
                         target_file = out_dir / f"{slug}.md"
                         target_file.write_text(result_url.markdown, encoding="utf-8")
-                        st.info(f"💾 **Copia guardada en disco:** `{target_file}`")
+                        st.info(f"**Archivo guardado en disco:** `{target_file}`")
                     except Exception as save_err:
-                        st.warning(f"⚠️ No se pudo guardar en disco: {save_err}")
+                        st.warning(f"Aviso: No se pudo guardar en disco: {save_err}")
 
                 u_tab1, u_tab2 = st.tabs(
-                    ["👁️ Vista Renderizada", "💻 Código Markdown (Raw)"]
+                    ["Vista Previa", "Código Markdown (Fuente)"]
                 )
                 with u_tab1:
                     st.markdown(result_url.markdown)
@@ -827,4 +827,4 @@ with tab_url:
                     st.code(result_url.markdown, language="markdown")
 
             except Exception as e:
-                st.error(f"❌ Error al procesar la URL: {str(e)}")
+                st.error(f"Error al procesar la URL: {str(e)}")

@@ -18,5 +18,9 @@ Este archivo registra las lecciones aprendidas, patrones detectados y reglas pre
    - Evitar ruido en el árbol y volcado: omitir estrictamente binarios, artefactos de compilación (`.pyc`, `.class`, `.o`), dependencias externas (`node_modules`, `.venv`) y lockfiles masivos.
    - Proveer siempre el árbol ASCII antes del contenido de los archivos para que el LLM pueda mapear dependencias relativas antes de procesar el código.
 
-4. **Verificación Sistemática**:
+4. **Estándar de Interfaz Profesional y Empresarial**:
+   - Evitar el uso de emojis informales en interfaces de usuario, botones, pestañas, scripts de shell, logs y reportes generados.
+   - Utilizar tipografía limpia, etiquetas semánticas claras y convenciones estándar de software profesional para maximizar la legibilidad y evitar problemas de codificación (`charmap`/`cp1252`) en entornos heterogéneos.
+
+5. **Verificación Sistemática**:
    - Cada nueva funcionalidad debe ser verificada con un script de prueba automatizado y validación de tipos/sintaxis antes de considerarse completa.

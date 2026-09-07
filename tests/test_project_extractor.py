@@ -79,7 +79,7 @@ def test_project_extraction():
         assert "```java" in cons_text
         assert "```yaml" in cons_text
 
-        print("\n✅ Todas las pruebas de extracción de carpetas PASARON exitosamente!")
+        print("\n[OK] Todas las pruebas de extracción de carpetas PASARON exitosamente!")
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -107,7 +107,7 @@ def test_zip_extraction():
         assert (res.output_dir / "CONSOLIDATED.md").exists()
         assert (res.output_dir / "sources" / "src" / "App.java.md").exists()
 
-        print("✅ Prueba de extracción desde ZIP PASÓ exitosamente!")
+        print("[OK] Prueba de extracción desde ZIP PASÓ exitosamente!")
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
 

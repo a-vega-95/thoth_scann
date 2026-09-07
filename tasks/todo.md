@@ -1,80 +1,74 @@
-# 📋 Plan de Tareas: Módulo de Extracción de Proyectos y Repositorios
+# Plan de Tareas: Implementación de Interfaz Limpia y Profesional
 
-## 🎯 Objetivo
-Implementar una solución de nivel profesional dentro de **Thoth Scann** para extraer proyectos de software y repositorios completos (soporte para .java, .R, .py, .sh, .yml, .sql, etc.). El sistema debe:
-1. Generar un **`TREE.md`** con la representación visual jerárquica del proyecto y métricas contextuales.
-2. Generar archivos individuales estructurados en **carpeta espejo** (óptimo para RAG, indexación y agentes modulares).
-3. Generar un **`CONSOLIDATED.md`** opcional con delimitadores precisos (óptimo para LLMs de contexto largo como Gemini 2.0 / Claude 3.7).
-4. Soportar tanto **rutas de carpetas locales en disco** (sin carga pesada de navegador) como **archivos `.zip`**.
+## Objetivo
+Refactorizar y transformar la interfaz de usuario, scripts auxiliares, motor de extracción y documentación de **Thoth Scann** hacia un estándar de diseño sobrio, formal y corporativo, eliminando el uso de emojis informales y garantizando máxima compatibilidad técnica y elegancia visual.
 
 ---
 
-## 📐 Especificación Arquitectónica
+## Especificación de Cambios
 
-### Componente 1: `thoth_extractor/project_extractor.py` (Módulo Autónomo)
-* **Clase `ProjectExtractor`**:
-  * `scan_directory(path, options) -> ExtractionResult`
-  * `scan_zip(zip_bytes_or_path, options) -> ExtractionResult`
-* **Módulos Internos**:
-  * `FilterEngine`: Parser de `.gitignore` + lista de exclusiones por defecto (`node_modules`, `.venv`, `.git`, `target`, `dist`, binarios, lockfiles).
-  * `TreeBuilder`: Generador de árbol ASCII jerárquico y cálculo de estadísticas (archivos, líneas, conteo de tokens aproximado, distribución de lenguajes).
-  * `CodeFormatter`: Formateador Markdown que envuelve cada archivo con sintaxis resaltada y metadatos de ruta relativa.
-  * `OutputWriter`: Escritura en disco de `TREE.md`, carpeta espejo `sources/`, y `CONSOLIDATED.md`.
+1. **`app.py` (UI Streamlit)**:
+   - Configuración de página: icono neutral/formal (ej. `"DOCUMENT"` o icono corporativo sin emoji decorativo).
+   - Títulos y cabeceras: estilo sobrio (`Thoth Scann | Digital Document & Code Converter`).
+   - Pestañas principales:
+     - De `"📄 Documento Individual"` -> `"Documento Individual"`
+     - De `"📦 Procesamiento por Lotes"` -> `"Procesamiento por Lotes"`
+     - De `"📂 Repositorio / Proyecto de Software"` -> `"Repositorio / Proyecto"`
+     - De `"🌐 Convertir desde URL"` -> `"Conversión Web / URL"`
+   - Subpestañas:
+     - De `"👁️ Vista Renderizada"` -> `"Vista Previa"`
+     - De `"💻 Código Markdown (Raw)"` -> `"Código Markdown (Fuente)"`
+     - De `"🌳 Mapa del Proyecto (TREE.md)"` -> `"Mapa de Directorios (TREE.md)"`
+     - De `"📊 Desglose de Lenguajes"` -> `"Distribución de Lenguajes"`
+   - Botones y alertas:
+     - De `"⚡ Convertir a Markdown"` -> `"Convertir a Markdown"`
+     - De `"📥 Descargar .md"` -> `"Descargar Markdown (.md)"`
+     - De `"❌ Error..."` -> `"Error: ..."`
+     - De `"✅ Conversión completada..."` -> `"Conversión completada con éxito."`
+     - De `"💾 Copia guardada en disco:"` -> `"Archivo guardado en disco:"`
+   - Barra lateral:
+     - Ajustes de motor, OCR y directorios con títulos limpios y claros.
 
-### Componente 2: Integración en `app.py` (Streamlit UI)
-* Pestaña dedicada: **"📂 Repositorio / Proyecto de Software"**.
-* Controles:
-  * Selector de entrada: "📁 Carpeta Local en Disco" vs "📦 Archivo ZIP".
-  * Casillas de configuración:
-    * `[x] Generar archivos separados (Espejo para RAG)`
-    * `[x] Generar archivo consolidado único (Para chats LLM)`
-    * `[x] Generar mapa contextual TREE.md`
-    * Selector de extensiones a incluir/excluir.
-  * Visualización en tiempo real:
-    * Métricas de resumen (Archivos procesados, Lenguajes, Líneas de código, Tokens estimados).
-    * Vista previa interactiva del `TREE.md` y del `CONSOLIDATED.md`.
-    * Botón de descarga ZIP consolidado y botón de apertura de carpeta de salida.
+2. **`thoth_extractor/project_extractor.py`**:
+   - Plantilla de `TREE.md`:
+     - De `# 🗺️ Mapa Arquitectónico...` -> `# Estructura Arquitectónica: ...`
+     - De `## 📊 Métricas Generales` -> `## Métricas del Proyecto`
+     - De `## 💻 Desglose por Lenguaje` -> `## Distribución de Lenguajes`
+     - De `## 🌳 Árbol Jerárquico...` -> `## Árbol de Directorios`
+     - De `## 📑 Índice de Archivos...` -> `## Catálogo de Archivos Fuente`
+   - Encabezado de `CONSOLIDATED.md`: texto descriptivo formal sin emojis.
 
----
+3. **Scripts de Shell (`run_ui.sh`, `restart_docker.sh`)**:
+   - Eliminar emojis en los mensajes `echo`, sustituyéndolos por prefijos formales como `[INFO]`, `[OK]`, `[AVISO]`.
 
-## 📋 Lista de Tareas Verificables
-
-- [x] **Fase 1: Módulo Core de Extracción (`thoth_extractor/`)**
-  - [x] Diseñar `thoth_extractor/project_extractor.py` desacoplado de la UI.
-  - [x] Implementar algoritmo de árbol ASCII y estadísticas de lenguajes.
-  - [x] Implementar filtrado de exclusiones (.git, .venv, node_modules, etc.).
-  - [x] Implementar generador de `TREE.md`, carpeta espejo de fuentes y `CONSOLIDATED.md`.
-- [x] **Fase 2: Pruebas y Verificación del Motor Core**
-  - [x] Crear un proyecto sintético de prueba con múltiples lenguajes (.java, .py, .r, .sh, .yml).
-  - [x] Ejecutar script de prueba autónomo y verificar que se generen correctamente los 3 formatos.
-  - [x] Validar que se respeten exclusiones y que las rutas relativas sean exactas.
-- [x] **Fase 3: Integración en la Interfaz Gráfica (`app.py`)**
-  - [x] Incorporar la pestaña "📂 Proyecto / Repositorio Completo".
-  - [x] Conectar selector de ruta local y uploader de archivo `.zip`.
-  - [x] Añadir controles de generación (Espejo vs Consolidado vs Tree).
-  - [x] Mostrar métricas, vista previa y descarga.
-- [x] **Fase 4: Verificación Integral del Sistema**
-  - [x] Comprobar compilación y ejecución de `app.py` sin errores ni advertencias.
-  - [x] Probar la interfaz end-to-end con una carpeta real.
-  - [x] Actualizar documentación en `README.md` y documentar resultados en `tasks/todo.md`.
-  - [x] Recrear el ZIP de distribución `thoth_scann_dist.zip`.
+4. **Documentación (`README.md`)**:
+   - Reemplazar emojis en encabezados y listas por viñetas limpias y títulos formales.
 
 ---
 
-## 🔬 Resultados de Verificación y Demostración
+## Lista de Tareas Verificables
 
-1. **Pruebas Unitarias Automatizadas**:
-   - `tests/test_project_extractor.py` ejecutado con éxito.
-   - Verificó:
-     - Detección de múltiples lenguajes (`.java`, `.py`, `.r`, `.sh`, `.yml`).
-     - Filtrado estricto de carpetas ignoradas (`node_modules`, `.venv`, `.git`) y lockfiles (`package-lock.json`).
-     - Creación y contenido de `TREE.md`, `CONSOLIDATED.md` y carpeta espejo `sources/`.
-     - Extracción idéntica desde carpeta local y desde buffer ZIP en memoria.
+- [x] **Fase 1: Refactorización de `app.py`**
+  - [x] Reemplazar emojis en títulos, sidebar y pestañas.
+  - [x] Reemplazar emojis en botones, subpestañas, métricas y mensajes de notificación.
+  - [x] Pulir estilos CSS para una apariencia corporativa elegante.
+- [x] **Fase 2: Refactorización de `thoth_extractor/project_extractor.py`**
+  - [x] Actualizar encabezados y tablas en las plantillas de `TREE.md` y `CONSOLIDATED.md`.
+  - [x] Ejecutar prueba unitaria para validar que las aserciones sigan cumpliéndose.
+- [x] **Fase 3: Refactorización de Scripts y Documentación**
+  - [x] Limpiar `run_ui.sh` y `restart_docker.sh`.
+  - [x] Actualizar `README.md` a estilo formal.
+- [x] **Fase 4: Verificación Integral**
+  - [x] Comprobar que ningún archivo de código o UI contenga emojis no deseados.
+  - [x] Ejecutar `python -m py_compile app.py thoth_extractor/project_extractor.py`.
+  - [x] Ejecutar prueba de arranque de Streamlit en modo headless.
+  - [x] Reconstruir archivo de distribución `thoth_scann_dist.zip`.
 
-2. **Prueba End-to-End en Entorno Real**:
-   - Ejecución de extracción sobre `markitdown-sample-plugin`.
-   - Resultado: 9 archivos procesados, ~15,089 tokens estimados, `TREE.md` y `CONSOLIDATED.md` generados correctamente en disco.
+---
 
-3. **Verificación de la Interfaz Web**:
-   - Compilación con `py_compile` limpia (código de salida 0).
-   - Arranque de Streamlit en modo headless exitoso (puerto 8501, Uvicorn started).
+## Resultados de Verificación
+- **Escaneo de Emojis/Símbolos**: 0 caracteres residuales en archivos fuente, UI, scripts y documentación.
+- **Pruebas Unitarias**: `tests/test_project_extractor.py` ejecutado y aprobado al 100% (carpetas y ZIPs).
+- **Compilación Python**: `py_compile` ejecutado exitosamente en todos los módulos (`app.py`, `thoth_extractor`, `tests`).
+- **Prueba de Servidor Headless**: Servidor Streamlit inicializado y validado en puerto de prueba sin advertencias.
+- **Empaquetado**: Archivo `thoth_scann_dist.zip` reconstruido y sincronizado.
