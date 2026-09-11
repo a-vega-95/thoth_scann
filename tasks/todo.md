@@ -66,9 +66,53 @@ Refactorizar y transformar la interfaz de usuario, scripts auxiliares, motor de 
 
 ---
 
-## Resultados de Verificación
+## Resultados de Verificación (Fase Previa)
 - **Escaneo de Emojis/Símbolos**: 0 caracteres residuales en archivos fuente, UI, scripts y documentación.
 - **Pruebas Unitarias**: `tests/test_project_extractor.py` ejecutado y aprobado al 100% (carpetas y ZIPs).
 - **Compilación Python**: `py_compile` ejecutado exitosamente en todos los módulos (`app.py`, `thoth_extractor`, `tests`).
 - **Prueba de Servidor Headless**: Servidor Streamlit inicializado y validado en puerto de prueba sin advertencias.
 - **Empaquetado**: Archivo `thoth_scann_dist.zip` reconstruido y sincronizado.
+
+---
+
+# Plan de Trabajo: Creación de Versión de Escritorio Portable (Standalone Runtime Bundle)
+
+## Objetivo
+Construir y verificar una distribución de escritorio 100% portable y autocontenida de **Thoth Scann** para sistemas Linux x86_64, basada en el estándar industrial `python-build-standalone` (Astral), sin requerir Docker, Python instalado ni privilegios de administrador (`sudo`).
+
+## Especificaciones de Arquitectura
+1. **Intérprete Autónomo**: CPython 3.12 x86_64 stripped (glibc compatible).
+2. **Dependencias Preinstaladas**: Streamlit, MarkItDown, pdfminer.six, pdfplumber, mammoth, openpyxl, pandas, python-docx, python-pptx, etc.
+3. **Invocación Relativa**: Uso de `$HERE/runtime/bin/python3 -m streamlit run app.py` para evitar rotura por shebangs con rutas absolutas.
+4. **Lanzadores**:
+   - `thoth_scann.sh`: Script ejecutable con detección automática de ruta y navegador.
+   - `thoth-scann.desktop`: Acceso directo para integración en entornos de escritorio Linux.
+5. **Empaquetado Final**: Generación de `thoth_scann_portable_linux_x86_64.tar.gz` listo para distribución.
+
+## Lista de Tareas Verificables
+- [x] **Paso 1: Descarga y Extracción del Runtime de Python Standalone**
+  - [x] Descargar `cpython-3.12.*-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz`.
+  - [x] Extraer en directorio temporal y verificar ejecución del binario `python3 --version`.
+- [x] **Paso 2: Instalación de Dependencias en el Runtime Aislado**
+  - [x] Actualizar pip e instalar paquetes de `requirements.txt`.
+  - [x] Instalar el paquete local `markitdown`.
+- [x] **Paso 3: Estructuración del Bundle Portable**
+  - [x] Copiar código fuente limpio (`app.py`, `thoth_extractor/`, plantillas y configuración).
+  - [x] Crear directorio de persistencia `output/`.
+  - [x] Crear script lanzador `thoth_scann.sh` con manejo de rutas relativas y apertura de navegador.
+  - [x] Crear archivo `.desktop` y `README_PORTABLE.md`.
+- [x] **Paso 4: Pruebas de Portabilidad y Aislamiento**
+  - [x] Probar ejecución del bundle desde una ruta arbitraria fuera del repo original (`/tmp/thoth_portable_test`).
+  - [x] Validar importación de todas las dependencias con el Python del bundle.
+  - [x] Validar que la interfaz web arranque correctamente.
+- [x] **Paso 5: Compresión y Distribución**
+  - [x] Generar archivo final comprimido `thoth_scann_portable_linux_x86_64.tar.gz`.
+  - [x] Documentar el uso para el usuario final.
+
+---
+
+## Resultados de la Fase de Portabilidad
+- **Runtime Embebido**: CPython 3.12.14 x86_64 stripped (glibc 2.28+ compatible).
+- **Aislamiento**: Verificado en directorio `/tmp` externo; `$HERE/runtime/bin/python3` ejecuta Streamlit y módulos dependientes sin rutas codificadas en duro.
+- **Dinamismo de Rutas**: `app.py` y `project_extractor.py` actualizados para resolver automáticamente su ruta base `BASE_DIR` y subdirectorio local `output/`.
+- **Paquete de Distribución**: Generado exitosamente en `/home/massive-usr/Documentos/desarrollo/thoth_scann_portable_linux_x86_64.tar.gz` (203 MB comprimido).

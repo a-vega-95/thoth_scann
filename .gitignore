@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+output/
+build_portable/
+.DS_Store

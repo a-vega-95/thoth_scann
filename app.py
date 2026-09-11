@@ -12,8 +12,12 @@ import zipfile
 from pathlib import Path
 import streamlit as st
 
+# Directorio raíz base de la aplicación y ruta por defecto de salida
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_OUTPUT_DIR = str(BASE_DIR / "output")
+
 # Importación del motor MarkItDown y Thoth Extractor
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(BASE_DIR))
 try:
     from markitdown import MarkItDown, StreamInfo
     from thoth_extractor import (
@@ -243,7 +247,7 @@ with st.sidebar:
     )
     output_dir_input = st.text_input(
         "Carpeta de destino",
-        value="/home/massive-usr/Documentos/desarrollo/thoth_scann/output",
+        value=DEFAULT_OUTPUT_DIR,
         disabled=not auto_save,
         help="Ruta donde se escribirán los archivos .md generados.",
     )
@@ -555,7 +559,7 @@ with tab_project:
         with c_p1:
             proj_folder_path = st.text_input(
                 "Ruta absoluta de la carpeta del proyecto en tu equipo",
-                value="/home/massive-usr/Documentos/desarrollo/thoth_scann/markitdown-main",
+                value=str(BASE_DIR / "markitdown-main"),
                 help="Ruta directa de la carpeta en disco. No requiere subida por navegador.",
             )
         with c_p2:
@@ -600,7 +604,7 @@ with tab_project:
         out_base = Path(
             output_dir_input.strip()
             if auto_save and output_dir_input.strip()
-            else "/home/massive-usr/Documentos/desarrollo/thoth_scann/output"
+            else DEFAULT_OUTPUT_DIR
         )
         opts = ExtractionOptions(
             generate_tree=gen_tree,
