@@ -9,6 +9,12 @@ from .project_extractor import (
     extract_directory,
     extract_zip,
 )
+from .document_splitter import (
+    DocumentSplitter,
+    SplitOptions,
+    DocumentPart,
+    SplitResult,
+)
 
 __all__ = [
     "ProjectExtractor",
@@ -16,4 +22,9 @@ __all__ = [
     "ExtractionResult",
     "extract_directory",
     "extract_zip",
+    "DocumentSplitter",
+    "SplitOptions",
+    "DocumentPart",
+    "SplitResult",
 ]
+

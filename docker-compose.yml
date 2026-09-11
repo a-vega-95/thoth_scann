@@ -8,9 +8,11 @@ services:
       # Mapeo: [Puerto en tu computadora] : [Puerto dentro del contenedor]
       - "8501:8501"
     volumes:
-      # Volumen: Sincroniza la carpeta output de tu máquina física con la del contenedor
-      # Los archivos .md generados dentro del contenedor aparecerán directamente en tu carpeta local
+      # Sincroniza la carpeta output de tu máquina física con la del contenedor
       - ./output:/app/output
+      # Sincroniza app.py y thoth_extractor para que los cambios se reflejen inmediatamente sin reconstruir
+      - ./app.py:/app/app.py
+      - ./thoth_extractor:/app/thoth_extractor
     environment:
       # Puedes descomentar y agregar tu clave de OpenAI si deseas usar OCR por visión
       # - OPENAI_API_KEY=tu_api_key_aqui

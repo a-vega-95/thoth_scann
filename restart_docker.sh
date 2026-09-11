@@ -17,11 +17,11 @@ fi
 # Detener contenedor existente si está corriendo
 $DOCKER_CMD compose down || true
 
-# Reconstruir la imagen asegurando que tome los últimos cambios
-$DOCKER_CMD compose build
+# Reconstruir la imagen asegurando que tome los últimos cambios sin usar caché obsoleta
+$DOCKER_CMD compose build --no-cache
 
-# Levantar el servicio en segundo plano
-$DOCKER_CMD compose up -d
+# Levantar el servicio forzando la recreación del contenedor
+$DOCKER_CMD compose up -d --force-recreate
 
 echo ""
 echo "[OK] Contenedor reiniciado y ejecutándose con éxito."
