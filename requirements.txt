@@ -1,5 +1,5 @@
 # Dependencias de Thoth Scann para Contenedor Docker
-streamlit>=1.30.0
+streamlit>=1.55.0
 pdfminer.six>=20251230
 pdfplumber>=0.11.0
 mammoth>=1.11.0

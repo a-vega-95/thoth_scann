@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #17323d; font-family: "Segoe UI", "Trebuchet MS", sans-serif; }
+    .mascot { display: grid; justify-items: center; gap: 0; width: 70px; height: 70px; }
+    svg { width: 48px; height: 48px; }
+    .status { max-width: 70px; overflow: hidden; color: #537078; font-size: 9px; line-height: 1.1; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="mascot">
+    <svg viewBox="0 0 72 72" role="img" aria-label="Guía Thoth señalando el área de trabajo">
+      <path d="M35 39c-1 8-5 12-11 15h28c-7-3-10-7-11-15" fill="#d6eee8" stroke="#176e69" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="36" cy="25" r="17" fill="#f4c881" stroke="#176e69" stroke-width="2.5"/>
+      <path d="M21 22c2-11 25-17 31 0-8-2-13-7-16-11-3 6-8 10-15 11" fill="#176e69"/>
+      <circle cx="30" cy="26" r="1.8" fill="#17323d"/><circle cx="42" cy="26" r="1.8" fill="#17323d"/>
+      <path d="M32 32q4 4 8 0" fill="none" stroke="#17323d" stroke-width="2" stroke-linecap="round"/>
+      <path d="M47 45l12-12 5 1-9 10 9-3 2 3-17 8" fill="#f4c881" stroke="#176e69" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M27 55h19" stroke="#176e69" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <span class="status" id="status" aria-live="polite"></span>
+  </div>
+  <script>
+    const STORAGE_KEY = "thoth.project-guide.completed.v1";
+    function onRender(event) {
+      const args = event.data.args || {};
+      if (args.completed) localStorage.setItem(STORAGE_KEY, "true");
+      document.getElementById("status").textContent =
+        localStorage.getItem(STORAGE_KEY) === "true" ? "Guía vista" : "";
+      if (args.focus_target) {
+        try {
+          const target = window.parent.document.querySelector(args.focus_target);
+          if (target) {
+            window.setTimeout(() => target.scrollIntoView({
+              behavior: "smooth",
+                block: "start"
+            }), 40);
+          }
+        } catch (error) {
+          // The guide still works if the host blocks parent-document access.
+        }
+      }
+      window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 70 }, "*");
+    }
+    window.addEventListener("message", event => {
+      if (event.data && event.data.type === "streamlit:render") onRender(event);
+    });
+    window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
+    window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 70 }, "*");
+  </script>
+</body>
+</html>

@@ -8,12 +8,15 @@ import io
 import os
 import re
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from urllib.parse import urlparse
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Directorio raíz base de la aplicación y ruta por defecto de salida
 BASE_DIR = Path(__file__).resolve().parent
@@ -24,6 +27,7 @@ sys.path.insert(0, str(BASE_DIR))
 try:
     from markitdown import MarkItDown, StreamInfo
     from thoth_extractor import (
+        ProjectExtractor,
         extract_directory,
         extract_zip,
         ExtractionOptions,
@@ -38,6 +42,22 @@ except ImportError as e:
         "Asegúrate de haber activado el entorno virtual (.venv)."
     )
     st.stop()
+
+project_guide_component = components.declare_component(
+    "thoth_project_guide",
+    path=str(BASE_DIR / "components" / "thoth_guide"),
+)
+
+
+def set_project_guide_state(
+    is_open: bool,
+    step: int,
+    completed: bool = False,
+) -> None:
+    st.session_state["project_guide_open"] = is_open
+    st.session_state["project_guide_step"] = step
+    if completed:
+        st.session_state["project_guide_mark_completed"] = True
 
 
 # Configuración de página
@@ -94,6 +114,48 @@ st.markdown(
         margin-top: 8px;
         margin-bottom: 3px;
     }
+    iframe.stCustomComponentV1 {
+        position: fixed !important;
+        top: 68px !important;
+        right: 16px !important;
+        z-index: 1002 !important;
+        width: 70px !important;
+        max-width: 70px !important;
+    }
+    @media (max-width: 480px) {
+        iframe.stCustomComponentV1 {
+            top: 60px !important;
+            right: 8px !important;
+        }
+    }
+    .st-key-project_guide_toggle {
+        position: fixed !important;
+        top: 80px !important;
+        right: 82px !important;
+        z-index: 1003 !important;
+    }
+    .st-key-project_guide_panel {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 16px !important;
+        right: 16px !important;
+        z-index: 1002 !important;
+        width: min(390px, calc(100vw - 32px)) !important;
+        padding: 16px !important;
+        border: 1px solid #c8d9d5 !important;
+        border-radius: 8px !important;
+        background: #fffefa !important;
+        box-shadow: 0 16px 40px #102f3b30 !important;
+    }
+    @media (max-width: 480px) {
+        .st-key-project_guide_toggle { top: 72px !important; right: 68px !important; }
+        .st-key-project_guide_panel {
+            top: auto !important;
+            bottom: 8px !important;
+            right: 8px !important;
+            width: calc(100vw - 16px) !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -109,6 +171,48 @@ def format_bytes(size_bytes: int) -> str:
     else:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
 
+def select_project_folder() -> None:
+    """Abre el selector de carpetas del equipo donde se ejecuta Streamlit."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        current_path = st.session_state.get("project_folder_path", "")
+        initial_dir = current_path if Path(current_path).is_dir() else str(BASE_DIR)
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected_path = filedialog.askdirectory(
+            title="Selecciona la carpeta del proyecto",
+            initialdir=initial_dir,
+            mustexist=True,
+        )
+        root.destroy()
+
+        if selected_path:
+            st.session_state["project_folder_path"] = selected_path
+    except Exception as error:
+        st.session_state["project_folder_picker_error"] = str(error)
+
+
+def materialize_uploaded_folder(uploaded_files, target_dir: Path) -> None:
+    """Reconstruye en disco una carpeta seleccionada desde el navegador."""
+    for uploaded_file in uploaded_files:
+        relative_path = PurePosixPath(str(uploaded_file.name).replace("\\", "/"))
+        if relative_path.is_absolute():
+            continue
+        relative_parts = [
+            part
+            for part in relative_path.parts
+            if part not in ("", ".", "..")
+        ]
+        if not relative_parts:
+            continue
+
+        destination = target_dir.joinpath(*relative_parts)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(uploaded_file.getvalue())
 
 # Diccionario de extensiones de código a lenguajes Markdown
 CODE_EXTENSIONS = {
@@ -391,7 +495,9 @@ tab_single, tab_batch, tab_project, tab_url = st.tabs(
         "Procesamiento por Lotes",
         "Repositorio / Proyecto",
         "Conversión Web / URL",
-    ]
+    ],
+    key="application_tabs",
+    on_change="rerun",
 )
 
 # ==========================================
@@ -830,7 +936,170 @@ with tab_batch:
 # PESTAÑA 3: REPOSITORIO / PROYECTO COMPLETO
 # ==========================================
 with tab_project:
-    st.markdown("#### Extracción y Documentación de Proyectos Completos")
+    project_mode = st.session_state.get(
+        "project_input_mode",
+        "Carpeta Local en Disco (Rápido, sin subida)",
+    )
+    if "Seleccionar Carpeta" in project_mode:
+        source_target = ".st-key-project_folder_uploader"
+    elif "Archivo ZIP" in project_mode:
+        source_target = ".st-key-project_zip_uploader"
+    else:
+        source_target = ".st-key-project_folder_path"
+
+    project_guide_steps = [
+        {
+            "title": "Elige el origen del proyecto",
+            "text": "Selecciona una carpeta del equipo, una ruta local o un archivo ZIP. La ruta local accede al disco donde se ejecuta Thoth Scann.",
+            "target": ".st-key-project_input_mode",
+        },
+        {
+            "title": "Selecciona el repositorio",
+            "text": "Indica la carpeta o el ZIP que quieres documentar. En modo navegador, selecciona la carpeta para cargar su contenido.",
+            "target": source_target,
+        },
+        {
+            "title": "Genera y revisa los resultados",
+            "text": "Inicia la extracción. Podrás revisar el árbol y descargar CONSOLIDATED.md, los archivos separados o el paquete completo.",
+            "target": ".st-key-project_extract_button",
+        },
+    ]
+
+    guide_open = st.session_state.get("project_guide_open", False)
+    guide_step = st.session_state.get("project_guide_step", -1)
+    mark_guide_completed = st.session_state.pop(
+        "project_guide_mark_completed",
+        False,
+    )
+    focus_target = (
+        project_guide_steps[guide_step]["target"]
+        if guide_open and 0 <= guide_step < len(project_guide_steps)
+        else ""
+    )
+    project_guide_component(
+        completed=mark_guide_completed,
+        focus_target=focus_target,
+        width=70,
+        key="thoth_project_guide_mascot",
+        default=None,
+    )
+
+    title_col, help_col = st.columns([7, 1])
+    with title_col:
+        st.markdown("#### Extracción y Documentación de Proyectos Completos")
+    with help_col:
+        help_clicked = st.button(
+            "?",
+            key="project_guide_toggle",
+            help="Abrir o cerrar la guía de extracción de proyectos.",
+        )
+    if help_clicked:
+        guide_open = not guide_open
+        guide_step = -1
+        set_project_guide_state(guide_open, guide_step)
+
+    if guide_open and 0 <= guide_step < len(project_guide_steps):
+        target_selector = project_guide_steps[guide_step]["target"]
+        st.markdown(
+            f"""
+            <style>
+            .thoth-guide-scrim {{
+                position: fixed;
+                inset: 0;
+                z-index: 998;
+                background: rgba(15, 35, 43, 0.52);
+                pointer-events: none;
+            }}
+            {target_selector} {{
+                position: relative !important;
+                z-index: 999 !important;
+                outline: 3px solid #e1a33c !important;
+                outline-offset: 5px !important;
+                scroll-margin-top: 96px !important;
+                border-radius: 6px !important;
+                background-color: #fffefa !important;
+                box-shadow: 0 0 0 7px rgba(255, 254, 250, 0.96) !important;
+            }}
+            </style>
+            <div class="thoth-guide-scrim"></div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    if guide_open:
+        with st.container(key="project_guide_panel", border=True):
+            if guide_step < 0:
+                st.markdown("#### Asistencia contextual")
+                st.write(
+                    "Te acompaño en tres pasos para elegir el origen, seleccionar el repositorio y generar sus archivos de salida."
+                )
+                close_col, start_col = st.columns(2)
+                with close_col:
+                    st.button(
+                        "Cerrar",
+                        key="project_guide_close_intro",
+                        on_click=set_project_guide_state,
+                        args=(False, -1),
+                    )
+                with start_col:
+                    st.button(
+                        "Iniciar guía",
+                        type="primary",
+                        key="project_guide_start",
+                        on_click=set_project_guide_state,
+                        args=(True, 0),
+                    )
+            else:
+                current_step = project_guide_steps[guide_step]
+                st.caption(f"Paso {guide_step + 1} de {len(project_guide_steps)}")
+                st.markdown(f"#### {current_step['title']}")
+                st.write(current_step["text"])
+                st.progress((guide_step + 1) / len(project_guide_steps))
+
+                skip_col, close_col = st.columns(2)
+                with skip_col:
+                    st.button(
+                        "Omitir",
+                        key="project_guide_skip",
+                        on_click=set_project_guide_state,
+                        args=(False, -1, True),
+                    )
+                with close_col:
+                    st.button(
+                        "Cerrar",
+                        key="project_guide_close",
+                        on_click=set_project_guide_state,
+                        args=(False, -1),
+                    )
+
+                previous_col, next_col = st.columns(2)
+                with previous_col:
+                    st.button(
+                        "Anterior",
+                        disabled=guide_step == 0,
+                        key="project_guide_previous",
+                        on_click=set_project_guide_state,
+                        args=(True, max(guide_step - 1, 0)),
+                    )
+                with next_col:
+                    is_final_step = guide_step == len(project_guide_steps) - 1
+                    next_label = (
+                        "Terminar"
+                        if is_final_step
+                        else "Siguiente"
+                    )
+                    st.button(
+                        next_label,
+                        type="primary",
+                        key="project_guide_next",
+                        on_click=set_project_guide_state,
+                        args=(
+                            not is_final_step,
+                            -1 if is_final_step else guide_step + 1,
+                            is_final_step,
+                        ),
+                    )
+
     st.write(
         "Escanea un repositorio o carpeta de software completo. Genera el mapa jerárquico (**TREE.md**), "
         "la estructura espejo de archivos individuales para RAG/agentes (**sources/**) "
@@ -841,24 +1110,55 @@ with tab_project:
         "Método de entrada",
         [
             "Carpeta Local en Disco (Rápido, sin subida)",
+            "Seleccionar Carpeta desde este Equipo",
             "Archivo ZIP del Proyecto",
         ],
         horizontal=True,
+        key="project_input_mode",
     )
 
     proj_folder_path = ""
+    proj_uploaded_folder = None
     proj_zip_file = None
     custom_proj_name = ""
 
     if "Carpeta Local" in proj_input_mode:
+        if "project_folder_path" not in st.session_state:
+            st.session_state["project_folder_path"] = str(BASE_DIR / "markitdown-main")
+
         c_p1, c_p2 = st.columns([3, 1])
         with c_p1:
             proj_folder_path = st.text_input(
                 "Ruta absoluta de la carpeta del proyecto en tu equipo",
-                value=str(BASE_DIR / "markitdown-main"),
+                key="project_folder_path",
                 help="Ruta directa de la carpeta en disco. No requiere subida por navegador.",
             )
         with c_p2:
+            st.button(
+                "Buscar carpeta",
+                on_click=select_project_folder,
+                use_container_width=True,
+                help="Abre el selector de carpetas del equipo donde se ejecuta la aplicación.",
+            )
+            if st.session_state.pop("project_folder_picker_error", None):
+                st.warning(
+                    "No se pudo abrir el selector de carpetas. Puedes escribir la ruta manualmente."
+                )
+            custom_proj_name = st.text_input(
+                "Nombre del proyecto (opcional)",
+                value="",
+                placeholder="Autodetectar de la carpeta",
+            )
+    elif "Seleccionar Carpeta" in proj_input_mode:
+        c_f1, c_f2 = st.columns([3, 1])
+        with c_f1:
+            proj_uploaded_folder = st.file_uploader(
+                "Selecciona una carpeta del equipo",
+                accept_multiple_files="directory",
+                key="project_folder_uploader",
+                help="El navegador cargará temporalmente los archivos de la carpeta para procesarlos en la aplicación.",
+            )
+        with c_f2:
             custom_proj_name = st.text_input(
                 "Nombre del proyecto (opcional)",
                 value="",
@@ -893,7 +1193,9 @@ with tab_project:
         )
 
     btn_extract_project = st.button(
-        "Extraer y Documentar Proyecto", type="primary"
+        "Extraer y Documentar Proyecto",
+        type="primary",
+        key="project_extract_button",
     )
 
     if btn_extract_project:
@@ -926,6 +1228,34 @@ with tab_project:
                         output_base_dir=out_base,
                         options=opts,
                     )
+                elif "Seleccionar Carpeta" in proj_input_mode:
+                    if not proj_uploaded_folder:
+                        st.error(
+                            "Error: Por favor selecciona una carpeta del equipo para procesar."
+                        )
+                        st.stop()
+
+                    first_path = PurePosixPath(proj_uploaded_folder[0].name)
+                    detected_name = (
+                        first_path.parts[0]
+                        if first_path.parts
+                        else "proyecto_local"
+                    )
+                    with tempfile.TemporaryDirectory(prefix="thoth_project_") as temp_dir:
+                        temp_root_dir = Path(temp_dir)
+                        materialize_uploaded_folder(
+                            proj_uploaded_folder,
+                            temp_root_dir,
+                        )
+                        temp_project_dir = temp_root_dir / detected_name
+                        if not temp_project_dir.is_dir():
+                            temp_project_dir = temp_root_dir
+                        extractor = ProjectExtractor(opts)
+                        res_proj = extractor.extract_directory(
+                            source_dir=temp_project_dir,
+                            output_base_dir=out_base,
+                            project_name=custom_proj_name.strip() or detected_name,
+                        )
                 else:
                     if proj_zip_file is None:
                         st.error(

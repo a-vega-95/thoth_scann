@@ -506,12 +506,17 @@ class ProjectExtractor:
 def extract_directory(
     source_dir: Path | str,
     output_base_dir: Optional[Path | str] = None,
+    project_name: Optional[str] = None,
     options: Optional[ExtractionOptions] = None,
 ) -> ExtractionResult:
     """Función de conveniencia para extraer una carpeta local."""
     target_out = Path(output_base_dir) if output_base_dir else (Path.cwd() / "output")
     extractor = ProjectExtractor(options)
-    return extractor.extract_directory(Path(source_dir), target_out)
+    return extractor.extract_directory(
+        Path(source_dir),
+        target_out,
+        project_name=project_name,
+    )
 
 
 def extract_zip(
